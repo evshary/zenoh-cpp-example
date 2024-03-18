@@ -18,9 +18,32 @@
 #include "zenoh.h"
 #include <unistd.h>
 
+const char *queryable_expr = "demo/router/zenoh-queryable";
+const char *queryable_value = "Queryable from C++ Router!";
+z_keyexpr_t keyexpr;
+
+// Queryable callback
+void query_handler(const z_query_t *query, void *context) {
+    z_owned_str_t keystr = z_keyexpr_to_string(z_query_keyexpr(query));
+    z_bytes_t pred = z_query_parameters(query);
+    z_value_t payload_value = z_query_value(query);
+    char buf[256];
+    if (payload_value.payload.len > 0) {
+        sprintf(buf, ">> [Queryable ] Received Query '%s?%.*s' with value '%.*s'", z_loan(keystr), (int)pred.len,
+                pred.start, (int)payload_value.payload.len, payload_value.payload.start);
+    } else {
+        sprintf(buf, ">> [Queryable ] Received Query '%s?%.*s'", z_loan(keystr), (int)pred.len, pred.start);
+    }
+    std::cout << buf << std::endl;
+    z_query_reply_options_t options = z_query_reply_options_default();
+    options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
+    z_query_reply(query, z_keyexpr((const char *)context), (const unsigned char *)queryable_value, strlen(queryable_value), &options);
+    z_drop(z_move(keystr));
+}
+
 int main(int argc, char **argv) {
-    const char *keyexpr = "demo/router/zenoh-key";
-    const char *value = "Pub from C++ Router!";
+    const char *pub_keyexpr = "demo/router/zenoh-pub";
+    const char *pub_value = "Pub from C++ Router!";
 
     z_owned_config_t config = z_config_default();
     // Insert connect address
@@ -36,7 +59,8 @@ int main(int argc, char **argv) {
         std::cout << "Unable to switch router mode" << std::endl;
         exit(-1);
     }
-    // TODO: Load plugin
+    // Load plugins
+    // Not implemented yet
 
     std::cout << "Opening session..." << std::endl;
     z_owned_session_t s = z_open(z_move(config));
@@ -45,9 +69,18 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    // Create Queryable
+    std::cout << "Declaring Queryable on '" << queryable_expr << "'..." << std::endl;
+    z_owned_closure_query_t callback = z_closure(query_handler, NULL, queryable_expr);
+    z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(queryable_expr), z_move(callback), NULL);
+    if (!z_check(qable)) {
+        std::cout << "Unable to create queryable." << std::endl;
+        exit(-1);
+    }
+
     // Create Publisher
-    std::cout << "Declaring Publisher on '" << keyexpr << "'..." << std::endl;
-    z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(keyexpr), NULL);
+    std::cout << "Declaring Publisher on '" << pub_keyexpr << "'..." << std::endl;
+    z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(pub_keyexpr), NULL);
     if (!z_check(pub)) {
         std::cout << "Unable to declare Publisher for key expression!" << std::endl;
         exit(-1);
@@ -55,7 +88,7 @@ int main(int argc, char **argv) {
     char buf[256];
     for (int idx = 0; 1; ++idx) {
         sleep(1);
-        sprintf(buf, "Putting Data ('%s': '[%4d] %s')...", keyexpr, idx, value);
+        sprintf(buf, "Putting Data ('%s': '[%4d] %s')...", pub_keyexpr, idx, pub_value);
         std::cout << buf << std::endl;
         z_publisher_put_options_t options = z_publisher_put_options_default();
         options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
