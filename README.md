@@ -30,7 +30,9 @@ cd ..
 
 ```shell
 # Run router
-./build/zenohc_router "[\"tcp/localhost:8888\"]"
+./build/zenoh_router "[\"tcp/localhost:8888\"]"
 # Run subscriber
-./build/zenohc_subscriber "[\"tcp/localhost:8888\"]"
+./build/zenoh_subscriber "[\"tcp/localhost:8888\"]"
+# Run get
+./build/zenoh_get "[\"tcp/localhost:8888\"]"
 ```
