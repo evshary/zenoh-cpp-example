@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2022 ZettaScale Technology
+// Copyright (c) 2024 ZettaScale Technology
 //
 // This program and the accompanying materials are made available under the
 // terms of the Eclipse Public License 2.0 which is available at
@@ -19,19 +19,24 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-    const char *keyexpr = "demo/example/zenoh-c-pub";
-    const char *value = "Pub from C!";
-
-    if (argc > 1) keyexpr = argv[1];
-    if (argc > 2) value = argv[2];
+    const char *keyexpr = "demo/router/zenoh-key";
+    const char *value = "Pub from C++ Router!";
 
     z_owned_config_t config = z_config_default();
-    if (argc > 3) {
-        if (zc_config_insert_json(z_loan(config), Z_CONFIG_CONNECT_KEY, argv[3]) < 0) {
-            std::cout << "Couldn't insert value " << argv[3] << " in configuration." << std::endl;
+    // Insert connect address
+    if (argc > 1) {
+        if (zc_config_insert_json(z_loan(config), Z_CONFIG_LISTEN_KEY, argv[1]) < 0) {
+            std::cout << "Couldn't insert value " << argv[1] << " into the configuration." << std::endl;
+            std::cout << "Format should be [\"tcp/localhost:7447\"]" << std::endl;
             exit(-1);
         }
     }
+    // Switch to router mode
+    if (zc_config_insert_json(z_loan(config), Z_CONFIG_MODE_KEY, "\"router\"") < 0) {
+        std::cout << "Unable to switch router mode" << std::endl;
+        exit(-1);
+    }
+    // TODO: Load plugin
 
     std::cout << "Opening session..." << std::endl;
     z_owned_session_t s = z_open(z_move(config));
@@ -40,13 +45,13 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    // Create Publisher
     std::cout << "Declaring Publisher on " << keyexpr << "..." << std::endl;
     z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(keyexpr), NULL);
     if (!z_check(pub)) {
         std::cout << "Unable to declare Publisher for key expression!" << std::endl;
         exit(-1);
     }
-
     char buf[256];
     for (int idx = 0; 1; ++idx) {
         sleep(1);
