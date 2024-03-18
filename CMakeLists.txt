@@ -7,5 +7,7 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/zenohc-install/lib/cm
 find_package(zenohc REQUIRED)
 
 add_executable(zenohc_router src/z_router.cxx)
-#add_dependencies(zenohc_router zenohc::lib)
 target_link_libraries(zenohc_router PRIVATE zenohc::lib)
+
+add_executable(zenohc_subscriber src/z_sub.cxx)
+target_link_libraries(zenohc_subscriber PRIVATE zenohc::lib)

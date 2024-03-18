@@ -1,5 +1,7 @@
 # zenoh-cpp-example
 
+## Build
+
 * Build zenoh-c
 
 ```shell
@@ -22,4 +24,13 @@ mkdir -p build && cd build
 cmake ..
 cmake --build .
 cd ..
+```
+
+## Usage
+
+```shell
+# Run router
+./build/zenohc_router "[\"tcp/localhost:8888\"]"
+# Run subscriber
+./build/zenohc_subscriber "[\"tcp/localhost:8888\"]"
 ```

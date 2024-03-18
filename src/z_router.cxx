@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     }
 
     // Create Publisher
-    std::cout << "Declaring Publisher on " << keyexpr << "..." << std::endl;
+    std::cout << "Declaring Publisher on '" << keyexpr << "'..." << std::endl;
     z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(keyexpr), NULL);
     if (!z_check(pub)) {
         std::cout << "Unable to declare Publisher for key expression!" << std::endl;
