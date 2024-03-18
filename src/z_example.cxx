@@ -11,20 +11,16 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 
 #include "zenoh.h"
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-#include <windows.h>
-#define sleep(x) Sleep(x * 1000)
-#else
 #include <unistd.h>
-#endif
 
 int main(int argc, char **argv) {
-    char *keyexpr = "demo/example/zenoh-c-pub";
-    char *value = "Pub from C!";
+    const char *keyexpr = "demo/example/zenoh-c-pub";
+    const char *value = "Pub from C!";
 
     if (argc > 1) keyexpr = argv[1];
     if (argc > 2) value = argv[2];
@@ -32,33 +28,30 @@ int main(int argc, char **argv) {
     z_owned_config_t config = z_config_default();
     if (argc > 3) {
         if (zc_config_insert_json(z_loan(config), Z_CONFIG_CONNECT_KEY, argv[3]) < 0) {
-            printf(
-                "Couldn't insert value `%s` in configuration at `%s`. This is likely because `%s` expects a "
-                "JSON-serialized list of strings\n",
-                argv[3], Z_CONFIG_CONNECT_KEY, Z_CONFIG_CONNECT_KEY);
+            std::cout << "Couldn't insert value " << argv[3] << " in configuration." << std::endl;
             exit(-1);
         }
     }
 
-    printf("Opening session...\n");
+    std::cout << "Opening session..." << std::endl;
     z_owned_session_t s = z_open(z_move(config));
     if (!z_check(s)) {
-        printf("Unable to open session!\n");
+        std::cout << "Unable to open session!" << std::endl;
         exit(-1);
     }
 
-    printf("Declaring Publisher on '%s'...\n", keyexpr);
+    std::cout << "Declaring Publisher on " << keyexpr << "..." << std::endl;
     z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(keyexpr), NULL);
     if (!z_check(pub)) {
-        printf("Unable to declare Publisher for key expression!\n");
+        std::cout << "Unable to declare Publisher for key expression!" << std::endl;
         exit(-1);
     }
 
     char buf[256];
     for (int idx = 0; 1; ++idx) {
         sleep(1);
-        sprintf(buf, "[%4d] %s", idx, value);
-        printf("Putting Data ('%s': '%s')...\n", keyexpr, buf);
+        sprintf(buf, "Putting Data ('%s': '[%4d] %s')...", keyexpr, idx, value);
+        std::cout << buf << std::endl;
         z_publisher_put_options_t options = z_publisher_put_options_default();
         options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
         z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), &options);
