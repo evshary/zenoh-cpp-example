@@ -35,4 +35,6 @@ cd ..
 ./build/zenoh_subscriber "[\"tcp/localhost:8888\"]"
 # Run get
 ./build/zenoh_get "[\"tcp/localhost:8888\"]"
+# Run put
+./build/zenoh_put "[\"tcp/localhost:8888\"]"
 ```
