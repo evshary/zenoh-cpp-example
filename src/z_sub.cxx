@@ -16,8 +16,6 @@
 #include <unistd.h>
 #include "zenoh.h"
 
-const char *kind_to_str(z_sample_kind_t kind);
-
 void data_handler(const z_sample_t *sample, void *arg) {
     z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
     char buf[256];

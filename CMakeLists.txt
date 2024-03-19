@@ -14,3 +14,6 @@ target_link_libraries(zenoh_subscriber PRIVATE zenohc::lib)
 
 add_executable(zenoh_get src/z_get.cxx)
 target_link_libraries(zenoh_get PRIVATE zenohc::lib)
+
+add_executable(zenoh_put src/z_put.cxx)
+target_link_libraries(zenoh_put PRIVATE zenohc::lib)

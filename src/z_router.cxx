@@ -18,15 +18,19 @@
 #include "zenoh.h"
 #include <unistd.h>
 
-const char *queryable_expr = "demo/router/zenoh-queryable";
-const char *queryable_value = "Queryable from C++ Router!";
-z_keyexpr_t keyexpr;
+#define PUBLISH_EXPR    "demo/router/zenoh-pub"
+#define PUBLISH_VALUE   "Pub from C++ Router!"
+#define SUBSCRIBE_EXPR  "demo/router/zenoh-sub"
+#define QUERYABLE_EXPR  "demo/router/zenoh-queryable"
+#define QUERYABLE_VALUE "Queryable from C++ Router!"
 
 // Queryable callback
 void query_handler(const z_query_t *query, void *context) {
+    const char *queryable_value = QUERYABLE_VALUE;
     z_owned_str_t keystr = z_keyexpr_to_string(z_query_keyexpr(query));
     z_bytes_t pred = z_query_parameters(query);
     z_value_t payload_value = z_query_value(query);
+
     char buf[256];
     if (payload_value.payload.len > 0) {
         sprintf(buf, ">> [Queryable ] Received Query '%s?%.*s' with value '%.*s'", z_loan(keystr), (int)pred.len,
@@ -41,12 +45,24 @@ void query_handler(const z_query_t *query, void *context) {
     z_drop(z_move(keystr));
 }
 
+// Subscriber callback
+void subscribe_handler(const z_sample_t *sample, void *arg) {
+    z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
+    char buf[256];
+    sprintf(buf, ">> [Subscriber] Received ('%s': '%.*s')",
+                    z_loan(keystr), (int)sample->payload.len, sample->payload.start);
+    std::cout << buf << std::endl;
+    z_drop(z_move(keystr));
+}
+
 int main(int argc, char **argv) {
-    const char *pub_keyexpr = "demo/router/zenoh-pub";
-    const char *pub_value = "Pub from C++ Router!";
+    const char *queryable_expr = QUERYABLE_EXPR;
+    const char *sub_keyexpr = SUBSCRIBE_EXPR;
+    const char *pub_keyexpr = PUBLISH_EXPR;
+    const char *pub_value = PUBLISH_VALUE;
 
     z_owned_config_t config = z_config_default();
-    // Insert connect address
+    // Insert listen address
     if (argc > 1) {
         if (zc_config_insert_json(z_loan(config), Z_CONFIG_LISTEN_KEY, argv[1]) < 0) {
             std::cout << "Couldn't insert value " << argv[1] << " into the configuration." << std::endl;
@@ -69,10 +85,19 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    // Create Subscriber
+    z_owned_closure_sample_t sub_callback = z_closure(subscribe_handler);
+    std::cout << "Declaring Subscriber on '" << sub_keyexpr << "'..." << std::endl;
+    z_owned_subscriber_t sub = z_declare_subscriber(z_loan(s), z_keyexpr(sub_keyexpr), z_move(sub_callback), NULL);
+    if (!z_check(sub)) {
+        std::cout << "Unable to declare subscriber." << std::endl;
+        exit(-1);
+    }
+
     // Create Queryable
     std::cout << "Declaring Queryable on '" << queryable_expr << "'..." << std::endl;
-    z_owned_closure_query_t callback = z_closure(query_handler, NULL, queryable_expr);
-    z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(queryable_expr), z_move(callback), NULL);
+    z_owned_closure_query_t queryable_callback = z_closure(query_handler, NULL, queryable_expr);
+    z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(queryable_expr), z_move(queryable_callback), NULL);
     if (!z_check(qable)) {
         std::cout << "Unable to create queryable." << std::endl;
         exit(-1);
