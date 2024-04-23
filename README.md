@@ -5,6 +5,9 @@
 * Build zenoh-c
 
 ```shell
+# Get submodule
+git submodule init
+git submodule update
 # Build zenoh-c
 mkdir -p zenohc-build && cd zenohc-build 
 cmake ../zenoh-c
