@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
     }
     // Load REST plugins
     if (
+        zc_config_insert_json(z_loan(config), "plugins/rest/__path__", "\"./zenoh/target/release/libzenoh_plugin_rest.so\"") < 0 ||
         zc_config_insert_json(z_loan(config), "plugins/rest/__required__", "true") < 0 ||
         zc_config_insert_json(z_loan(config), "plugins/rest/http_port", "8000") < 0
        ) {

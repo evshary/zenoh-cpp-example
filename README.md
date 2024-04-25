@@ -2,13 +2,24 @@
 
 ## Build
 
+* Get submodule
+
+```shell
+git submodule init
+git submodule update
+```
+
+* Build zenoh rest plugin
+
+```shell
+cd zenoh
+cargo build -p zenoh-plugin-rest --features zenoh/shared-memory --release
+cd ..
+```
+
 * Build zenoh-c
 
 ```shell
-# Get submodule
-git submodule init
-git submodule update
-# Build zenoh-c
 mkdir -p zenohc-install
 mkdir -p zenohc-build && cd zenohc-build 
 cmake -DCMAKE_INSTALL_PREFIX=../zenohc-install -GNinja \
@@ -39,4 +50,10 @@ cd ..
 ./build/zenoh_get "[\"tcp/localhost:8888\"]"
 # Run put
 ./build/zenoh_put "[\"tcp/localhost:8888\"]"
+# Router loads REST plugin by default. You can curl the information
+curl http://localhost:8000/@/router/local
 ```
+
+## Note
+
+* While using plugins, you should make sure the plugin and zenoh-c are consistent, including Zenoh version and build features.
