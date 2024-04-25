@@ -75,8 +75,24 @@ int main(int argc, char **argv) {
         std::cout << "Unable to switch router mode" << std::endl;
         exit(-1);
     }
+    // Enable admin space
+    if (zc_config_insert_json(z_loan(config), "adminspace/enabled", "true") < 0) {
+        std::cout << "Unable to enable admin space" << std::endl;
+        exit(-1);
+    }
     // Load plugins
-    // Not implemented yet
+    if (zc_config_insert_json(z_loan(config), "plugins_loading/enabled", "true") < 0) {
+        std::cout << "Unable to enable plugins" << std::endl;
+        exit(-1);
+    }
+    // Load REST plugins
+    if (
+        zc_config_insert_json(z_loan(config), "plugins/rest/__required__", "true") < 0 ||
+        zc_config_insert_json(z_loan(config), "plugins/rest/http_port", "8000") < 0
+       ) {
+        std::cout << "Unable to load REST plugins" << std::endl;
+        exit(-1);
+    }
 
     std::cout << "Opening session..." << std::endl;
     z_owned_session_t s = z_open(z_move(config));
