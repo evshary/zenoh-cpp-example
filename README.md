@@ -30,6 +30,17 @@ cmake --build . --target install
 cd ..
 ```
 
+* Build zenoh-cpp
+
+```shell
+mkdir -p zenohcpp-install
+mkdir -p zenohcpp-build && cd zenohcpp-build
+cmake -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
+    ../zenoh-cpp/install
+cmake --install .
+cd ..
+```
+
 * Build examples
 
 ```shell

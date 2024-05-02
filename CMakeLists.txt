@@ -6,14 +6,14 @@ project(zenohc_routers
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/zenohc-install/lib/cmake/")
 find_package(zenohc REQUIRED)
 
-add_executable(zenoh_router src/z_router.cxx)
+add_executable(zenoh_router src/zenohc/z_router.cxx)
 target_link_libraries(zenoh_router PRIVATE zenohc::lib)
 
-add_executable(zenoh_subscriber src/z_sub.cxx)
+add_executable(zenoh_subscriber src/zenohc/z_sub.cxx)
 target_link_libraries(zenoh_subscriber PRIVATE zenohc::lib)
 
-add_executable(zenoh_get src/z_get.cxx)
+add_executable(zenoh_get src/zenohc/z_get.cxx)
 target_link_libraries(zenoh_get PRIVATE zenohc::lib)
 
-add_executable(zenoh_put src/z_put.cxx)
+add_executable(zenoh_put src/zenohc/z_put.cxx)
 target_link_libraries(zenoh_put PRIVATE zenohc::lib)
