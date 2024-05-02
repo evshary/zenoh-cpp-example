@@ -17,3 +17,9 @@ target_link_libraries(zenoh_get PRIVATE zenohc::lib)
 
 add_executable(zenoh_put src/zenohc/z_put.cxx)
 target_link_libraries(zenoh_put PRIVATE zenohc::lib)
+
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/zenohcpp-install/lib/cmake/")
+find_package(zenohcxx REQUIRED)
+
+add_executable(zenoh_put_cpp src/zenohcpp/z_put.cxx)
+target_link_libraries(zenoh_put_cpp PRIVATE zenohc::lib zenohcxx::zenohc::lib)

@@ -1,5 +1,7 @@
 # zenoh-cpp-example
 
+The repo shows how to build C++ program with zenoh-c or zenoh-cpp.
+
 ## Build
 
 * Get submodule
@@ -52,6 +54,8 @@ cd ..
 
 ## Usage
 
+* Using zenoh-c
+
 ```shell
 # Run router
 ./build/zenoh_router "[\"tcp/localhost:8888\"]"
@@ -63,6 +67,15 @@ cd ..
 ./build/zenoh_put "[\"tcp/localhost:8888\"]"
 # Router loads REST plugin by default. You can curl the information
 curl http://localhost:8000/@/router/local
+```
+
+* Using zenoh-cpp
+
+```shell
+# Run router
+./build/zenoh_router
+# Run put
+./build/zenoh_put_cpp
 ```
 
 ## Note
