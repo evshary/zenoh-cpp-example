@@ -16,39 +16,48 @@
 #include <unistd.h>
 #include "zenoh.h"
 
-void data_handler(const z_sample_t *sample, void *arg) {
-    z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
-    char buf[256];
-    sprintf(buf, ">> [Subscriber] Received ('%s': '%.*s')",
-                    z_loan(keystr), (int)sample->payload.len, sample->payload.start);
-    std::cout << buf << std::endl;
-    z_drop(z_move(keystr));
+void data_handler(z_loaned_sample_t *sample, void *arg) {
+    z_view_string_t key_string;
+    z_keyexpr_as_view_string(z_sample_keyexpr(sample), &key_string);
+
+    z_owned_string_t payload_string;
+    z_bytes_to_string(z_sample_payload(sample), &payload_string);
+
+    printf(">> [Subscriber] Received ('%.*s': '%.*s')\n",
+           (int)z_string_len(z_loan(key_string)), z_string_data(z_loan(key_string)),
+           (int)z_string_len(z_loan(payload_string)), z_string_data(z_loan(payload_string)));
+    z_drop(z_move(payload_string));
 }
 
 int main(int argc, char **argv) {
     const char *expr = "demo/router/**";
 
-    z_owned_config_t config = z_config_default();
+    z_owned_config_t config;
+    z_config_default(&config);
     if (argc > 1) {
-        if (zc_config_insert_json(z_loan(config), Z_CONFIG_CONNECT_KEY, argv[1]) < 0) {
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, argv[1]) < 0) {
             std::cout << "Couldn't insert value " << argv[1] << " into the configuration." << std::endl;
             std::cout << "Format should be [\"tcp/localhost:7447\"]" << std::endl;
             exit(-1);
         }
     }
 
-    std::cout << "Opening session..." << std::endl;;
-    z_owned_session_t s = z_open(z_move(config));
-    if (!z_check(s)) {
-        std::cout << "Unable to open session!" << std::endl;;
+    z_view_keyexpr_t ke;
+    z_view_keyexpr_from_str(&ke, expr);
+
+    printf("Opening session...\n");
+    z_owned_session_t s;
+    if (z_open(&s, z_move(config), NULL) < 0) {
+        printf("Unable to open session!\n");
         exit(-1);
     }
 
-    z_owned_closure_sample_t callback = z_closure(data_handler);
-    std::cout << "Declaring Subscriber on '" << expr << "'..." << std::endl;
-    z_owned_subscriber_t sub = z_declare_subscriber(z_loan(s), z_keyexpr(expr), z_move(callback), NULL);
-    if (!z_check(sub)) {
-        std::cout << "Unable to declare subscriber." << std::endl;
+    z_owned_closure_sample_t callback;
+    z_closure(&callback, data_handler, NULL, NULL);
+    printf("Declaring Subscriber on '%s'...\n", expr);
+    z_owned_subscriber_t sub;
+    if (z_declare_subscriber(z_loan(s), &sub, z_loan(ke), z_move(callback), NULL) < 0) {
+        printf("Unable to declare subscriber.\n");
         exit(-1);
     }
 
@@ -61,6 +70,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    z_close(z_move(s));
+    z_drop(z_move(sub));
+    z_drop(z_move(s));
     return 0;
 }

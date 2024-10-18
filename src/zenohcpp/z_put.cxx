@@ -20,26 +20,28 @@ using namespace zenoh;
 int _main(int argc, char **argv) {
     const char *keyexpr = "demo/router/zenoh-sub";
     const char *value = "Put to C++ Router!";
+    Config config = zenoh::Config::create_default();
 
-    Config config;
+    std::cout << "Opening session...\n";
+    auto session = Session::open(std::move(config));
 
-    std::cout << "Opening session..." << std::endl;
-    auto session = expect<Session>(open(std::move(config)));
+    std::cout << "Putting Data (" << "'" << keyexpr << "': '" << value << "')...\n";
 
-    std::cout << "Putting Data ('" << keyexpr << "': '" << value << "')..." << std::endl;;
-    PutOptions options;
-    options.set_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN);
-    if (!session.put(keyexpr, value, options)) {
-        std::cout << "Put failed..." << std::endl;
-    }
+    Session::PutOptions put_options;
+    put_options.encoding = Encoding("text/plain");
 
+    std::unordered_map<std::string, std::string> attachment_map = {{"serial_number", "123"},
+                                                                   {"coordinates", "48.7082,2.1498"}};
+    put_options.attachment = ext::serialize(attachment_map);
+
+    session.put(KeyExpr(keyexpr), value, std::move(put_options));
     return 0;
 }
 
 int main(int argc, char **argv) {
     try {
         _main(argc, argv);
-    } catch (ErrorMessage e) {
-        std::cout << "Received an error :" << e.as_string_view() << "\n";
+    } catch (ZException e) {
+        std::cout << "Received an error :" << e.what() << "\n";
     }
 }

@@ -21,35 +21,48 @@ int main(int argc, char **argv) {
     const char *keyexpr = "demo/router/zenoh-sub";
     const char *value = "Put to C++ Router!";
 
-    z_owned_bytes_map_t attachment = z_bytes_map_new();
-    z_bytes_map_insert_by_alias(&attachment, z_bytes_new("hello"), z_bytes_new("there"));
-
-    z_owned_config_t config = z_config_default();
+    z_owned_config_t config;
+    z_config_default(&config);
     if (argc > 1) {
-        if (zc_config_insert_json(z_loan(config), Z_CONFIG_CONNECT_KEY, argv[1]) < 0) {
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, argv[1]) < 0) {
             std::cout << "Couldn't insert value " << argv[1] << " into the configuration." << std::endl;
             std::cout << "Format should be [\"tcp/localhost:7447\"]" << std::endl;
             exit(-1);
         }
     }
 
-    std::cout << "Opening session..." << std::endl;
-    z_owned_session_t s = z_open(z_move(config));
-    if (!z_check(s)) {
-        std::cout << "Unable to open session!" << std::endl;
+    printf("Opening session...\n");
+    z_owned_session_t s;
+    if (z_open(&s, z_move(config), NULL) < 0) {
+        printf("Unable to open session!\n");
         exit(-1);
     }
 
-    std::cout << "Putting Data ('" << keyexpr << "': '" << value << "')..." << std::endl;
-    z_put_options_t options = z_put_options_default();
-    options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
-    options.attachment = z_bytes_map_as_attachment(&attachment);
-    int res = z_put(z_loan(s), z_keyexpr(keyexpr), (const uint8_t *)value, strlen(value), &options);
+    printf("Putting Data ('%s': '%s')...\n", keyexpr, value);
+
+    z_view_keyexpr_t ke;
+    z_view_keyexpr_from_str(&ke, keyexpr);
+
+    z_owned_bytes_t payload;
+    z_bytes_from_static_str(&payload, value);
+    z_put_options_t options;
+    z_put_options_default(&options);
+
+    z_owned_bytes_t attachment;
+    ze_owned_serializer_t serializer;
+    ze_serializer_empty(&serializer);
+    ze_serializer_serialize_sequence_length(z_loan_mut(serializer), 1);  // 1 key-value pair
+    ze_serializer_serialize_str(z_loan_mut(serializer), "hello");
+    ze_serializer_serialize_str(z_loan_mut(serializer), "there");
+    ze_serializer_finish(z_move(serializer), &attachment);
+
+    options.attachment = z_move(attachment);  // attachement is consumed by z_put, so no need to drop it manually
+    int res = z_put(z_loan(s), z_loan(ke), z_move(payload), &options);
     if (res < 0) {
-        std::cout << "Put failed..." << std::endl;
+        printf("Put failed...\n");
     }
 
-    z_close(z_move(s));
-    z_drop(z_move(attachment));
+    z_drop(z_move(s));
+
     return 0;
 }

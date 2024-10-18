@@ -7,49 +7,31 @@ The repo shows how to build C++ program with zenoh-c or zenoh-cpp.
 * Get submodule
 
 ```shell
-git submodule init
-git submodule update
+just prepare
 ```
 
 * Build zenoh REST plugin
 
 ```shell
-cd zenoh
-cargo build -p zenoh-plugin-rest --features zenoh/shared-memory --release
-cd ..
+just zenoh
 ```
 
 * Build zenoh-c
 
 ```shell
-mkdir -p zenohc-install
-mkdir -p zenohc-build && cd zenohc-build 
-cmake -DCMAKE_INSTALL_PREFIX=../zenohc-install -GNinja \
-    ../zenoh-c -DZENOHC_CARGO_CHANNEL="+1.72.0" \
-    -DZENOHC_CARGO_FLAGS="--features=zenoh/plugins"
-cmake --build . --config Release
-cmake --build . --target install
-cd ..
+just zenoh-c
 ```
 
 * Build zenoh-cpp
 
 ```shell
-mkdir -p zenohcpp-install
-mkdir -p zenohcpp-build && cd zenohcpp-build
-cmake -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
-    ../zenoh-cpp/install
-cmake --install .
-cd ..
+just zenoh-cpp
 ```
 
 * Build examples
 
 ```shell
-mkdir -p build && cd build
-cmake ..
-cmake --build .
-cd ..
+just examples
 ```
 
 ## Usage
@@ -66,7 +48,7 @@ cd ..
 # Run put
 ./build/zenoh_put "[\"tcp/localhost:8888\"]"
 # Router loads REST plugin by default. You can curl the information
-curl http://localhost:8000/@/router/local
+curl http://localhost:8000/**
 ```
 
 * Using zenoh-cpp

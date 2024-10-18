@@ -25,34 +25,51 @@
 #define QUERYABLE_VALUE "Queryable from C++ Router!"
 
 // Queryable callback
-void query_handler(const z_query_t *query, void *context) {
+void query_handler(z_loaned_query_t *query, void *context) {
     const char *queryable_value = QUERYABLE_VALUE;
-    z_owned_str_t keystr = z_keyexpr_to_string(z_query_keyexpr(query));
-    z_bytes_t pred = z_query_parameters(query);
-    z_value_t payload_value = z_query_value(query);
+    z_view_string_t key_string;
+    z_keyexpr_as_view_string(z_query_keyexpr(query), &key_string);
 
-    char buf[256];
-    if (payload_value.payload.len > 0) {
-        sprintf(buf, ">> [Queryable ] Received Query '%s?%.*s' with value '%.*s'", z_loan(keystr), (int)pred.len,
-                pred.start, (int)payload_value.payload.len, payload_value.payload.start);
+    z_view_string_t params;
+    z_query_parameters(query, &params);
+
+    const z_loaned_bytes_t *payload = z_query_payload(query);
+    if (payload != NULL && z_bytes_len(payload) > 0) {
+        z_owned_string_t payload_string;
+        z_bytes_to_string(payload, &payload_string);
+
+        printf(">> [Queryable ] Received Query '%.*s?%.*s' with value '%.*s'\n", (int)z_string_len(z_loan(key_string)),
+               z_string_data(z_loan(key_string)), (int)z_string_len(z_loan(params)), z_string_data(z_loan(params)),
+               (int)z_string_len(z_loan(payload_string)), z_string_data(z_loan(payload_string)));
+        z_drop(z_move(payload_string));
     } else {
-        sprintf(buf, ">> [Queryable ] Received Query '%s?%.*s'", z_loan(keystr), (int)pred.len, pred.start);
+        printf(">> [Queryable ] Received Query '%.*s?%.*s'\n", (int)z_string_len(z_loan(key_string)),
+               z_string_data(z_loan(key_string)), (int)z_string_len(z_loan(params)), z_string_data(z_loan(params)));
     }
-    std::cout << buf << std::endl;
-    z_query_reply_options_t options = z_query_reply_options_default();
-    options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
-    z_query_reply(query, z_keyexpr((const char *)context), (const unsigned char *)queryable_value, strlen(queryable_value), &options);
-    z_drop(z_move(keystr));
+    z_query_reply_options_t options;
+    z_query_reply_options_default(&options);
+
+    z_owned_bytes_t reply_payload;
+    z_bytes_from_static_str(&reply_payload, (char *)queryable_value);
+
+    z_view_keyexpr_t reply_keyexpr;
+    z_view_keyexpr_from_str(&reply_keyexpr, (const char *)context);
+
+    z_query_reply(query, z_loan(reply_keyexpr), z_move(reply_payload), &options);
 }
 
 // Subscriber callback
-void subscribe_handler(const z_sample_t *sample, void *arg) {
-    z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
-    char buf[256];
-    sprintf(buf, ">> [Subscriber] Received ('%s': '%.*s')",
-                    z_loan(keystr), (int)sample->payload.len, sample->payload.start);
-    std::cout << buf << std::endl;
-    z_drop(z_move(keystr));
+void subscribe_handler(z_loaned_sample_t *sample, void *arg) {
+    z_view_string_t key_string;
+    z_keyexpr_as_view_string(z_sample_keyexpr(sample), &key_string);
+
+    z_owned_string_t payload_string;
+    z_bytes_to_string(z_sample_payload(sample), &payload_string);
+
+    printf(">> [Subscriber] Received ('%.*s': '%.*s')\n",
+           (int)z_string_len(z_loan(key_string)), z_string_data(z_loan(key_string)),
+           (int)z_string_len(z_loan(payload_string)), z_string_data(z_loan(payload_string)));
+    z_drop(z_move(payload_string));
 }
 
 int main(int argc, char **argv) {
@@ -61,84 +78,97 @@ int main(int argc, char **argv) {
     const char *pub_keyexpr = PUBLISH_EXPR;
     const char *pub_value = PUBLISH_VALUE;
 
-    z_owned_config_t config = z_config_default();
+    z_view_keyexpr_t sub_ke;
+    z_view_keyexpr_from_str(&sub_ke, sub_keyexpr);
+    z_view_keyexpr_t queryable_ke;
+    z_view_keyexpr_from_str(&queryable_ke, queryable_expr);
+
+    z_owned_config_t config;
+    z_config_default(&config);
     // Insert listen address
     if (argc > 1) {
-        if (zc_config_insert_json(z_loan(config), Z_CONFIG_LISTEN_KEY, argv[1]) < 0) {
+        if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, argv[1]) < 0) {
             std::cout << "Couldn't insert value " << argv[1] << " into the configuration." << std::endl;
             std::cout << "Format should be [\"tcp/localhost:7447\"]" << std::endl;
             exit(-1);
         }
     }
     // Switch to router mode
-    if (zc_config_insert_json(z_loan(config), Z_CONFIG_MODE_KEY, "\"router\"") < 0) {
+    if (zc_config_insert_json5(z_loan_mut(config), Z_CONFIG_MODE_KEY, "\"router\"") < 0) {
         std::cout << "Unable to switch router mode" << std::endl;
         exit(-1);
     }
     // Enable admin space
-    if (zc_config_insert_json(z_loan(config), "adminspace/enabled", "true") < 0) {
+    if (zc_config_insert_json5(z_loan_mut(config), "adminspace/enabled", "true") < 0) {
         std::cout << "Unable to enable admin space" << std::endl;
         exit(-1);
     }
     // Load plugins
-    if (zc_config_insert_json(z_loan(config), "plugins_loading/enabled", "true") < 0) {
+    if (zc_config_insert_json5(z_loan_mut(config), "plugins_loading/enabled", "true") < 0) {
         std::cout << "Unable to enable plugins" << std::endl;
         exit(-1);
     }
     // Load REST plugins
     if (
-        zc_config_insert_json(z_loan(config), "plugins/rest/__path__", "\"./zenoh/target/release/libzenoh_plugin_rest.so\"") < 0 ||
-        zc_config_insert_json(z_loan(config), "plugins/rest/__required__", "true") < 0 ||
-        zc_config_insert_json(z_loan(config), "plugins/rest/http_port", "8000") < 0
+        zc_config_insert_json5(z_loan_mut(config), "plugins/rest/__path__", "\"./zenoh/target/release/libzenoh_plugin_rest.so\"") < 0 ||
+        zc_config_insert_json5(z_loan_mut(config), "plugins/rest/__required__", "true") < 0 ||
+        zc_config_insert_json5(z_loan_mut(config), "plugins/rest/http_port", "8000") < 0
        ) {
         std::cout << "Unable to load REST plugins" << std::endl;
         exit(-1);
     }
 
-    std::cout << "Opening session..." << std::endl;
-    z_owned_session_t s = z_open(z_move(config));
-    if (!z_check(s)) {
-        std::cout << "Unable to open session!" << std::endl;
+    printf("Opening session...\n");
+    z_owned_session_t s;
+    if (z_open(&s, z_move(config), NULL) < 0) {
+        printf("Unable to open session!\n");
         exit(-1);
     }
 
     // Create Subscriber
-    z_owned_closure_sample_t sub_callback = z_closure(subscribe_handler);
+    z_owned_closure_sample_t sub_callback;
+    z_closure(&sub_callback, subscribe_handler, NULL, NULL);
     std::cout << "Declaring Subscriber on '" << sub_keyexpr << "'..." << std::endl;
-    z_owned_subscriber_t sub = z_declare_subscriber(z_loan(s), z_keyexpr(sub_keyexpr), z_move(sub_callback), NULL);
-    if (!z_check(sub)) {
-        std::cout << "Unable to declare subscriber." << std::endl;
+    z_owned_subscriber_t sub;
+    if (z_declare_subscriber(z_loan(s), &sub, z_loan(sub_ke), z_move(sub_callback), NULL) < 0) {
+        printf("Unable to declare subscriber.\n");
         exit(-1);
     }
 
     // Create Queryable
-    std::cout << "Declaring Queryable on '" << queryable_expr << "'..." << std::endl;
-    z_owned_closure_query_t queryable_callback = z_closure(query_handler, NULL, queryable_expr);
-    z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(queryable_expr), z_move(queryable_callback), NULL);
-    if (!z_check(qable)) {
-        std::cout << "Unable to create queryable." << std::endl;
+    printf("Declaring Queryable on '%s'...\n", queryable_expr);
+    z_owned_closure_query_t queryable_callback;
+    z_closure(&queryable_callback, query_handler, NULL, (void *)queryable_expr);
+    z_owned_queryable_t qable;
+
+    if (z_declare_queryable(z_loan(s), &qable, z_loan(queryable_ke), z_move(queryable_callback), NULL) < 0) {
+        printf("Unable to create queryable.\n");
         exit(-1);
     }
 
     // Create Publisher
-    std::cout << "Declaring Publisher on '" << pub_keyexpr << "'..." << std::endl;
-    z_owned_publisher_t pub = z_declare_publisher(z_loan(s), z_keyexpr(pub_keyexpr), NULL);
-    if (!z_check(pub)) {
-        std::cout << "Unable to declare Publisher for key expression!" << std::endl;
+    printf("Declaring Publisher on '%s'...\n", pub_keyexpr);
+    z_owned_publisher_t pub;
+    z_view_keyexpr_t ke;
+    z_view_keyexpr_from_str(&ke, pub_keyexpr);
+    if (z_declare_publisher(z_loan(s), &pub, z_loan(ke), NULL) < 0) {
+        printf("Unable to declare Publisher for key expression!\n");
         exit(-1);
     }
-    char buf[256];
+    char buf[256] = {};
     for (int idx = 0; 1; ++idx) {
         sleep(1);
-        sprintf(buf, "Putting Data ('%s': '[%4d] %s')...", pub_keyexpr, idx, pub_value);
-        std::cout << buf << std::endl;
-        z_publisher_put_options_t options = z_publisher_put_options_default();
-        options.encoding = z_encoding(Z_ENCODING_PREFIX_TEXT_PLAIN, NULL);
-        z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), &options);
+        sprintf(buf, "[%4d] %s", idx, pub_value);
+        printf("Putting Data ('%s': '%s')...\n", pub_keyexpr, buf);
+        z_publisher_put_options_t options;
+        z_publisher_put_options_default(&options);
+
+        z_owned_bytes_t payload;
+        z_bytes_copy_from_str(&payload, buf);
+
+        z_publisher_put(z_loan(pub), z_move(payload), &options);
     }
 
-    z_undeclare_publisher(z_move(pub));
-
-    z_close(z_move(s));
+    z_drop(z_move(s));
     return 0;
 }
