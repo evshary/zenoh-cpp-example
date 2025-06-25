@@ -13,7 +13,7 @@ zenoh-c:
     cd zenohc-build && \
         cmake -DCMAKE_INSTALL_PREFIX=../zenohc-install -GNinja \
               -DZENOHC_BUILD_WITH_UNSTABLE_API=true -DZENOHC_BUILD_WITH_SHARED_MEMORY=true \
-              ../zenoh-c -DZENOHC_CARGO_CHANNEL="+1.75.0" \
+              ../zenoh-c \
               -DZENOHC_CARGO_FLAGS="--features=zenoh/default,zenoh/internal,zenoh/plugins"
     cd zenohc-build && \
         cmake --build . --config Release
