@@ -1,6 +1,6 @@
 all: lib examples
 
-lib: zenoh zenoh-c zenoh-pico zenoh-cpp
+lib: zenoh-c zenoh-pico zenoh-cpp
 
 prepare:
     git submodule init
@@ -43,7 +43,7 @@ zenoh-cpp: zenoh-c zenoh-pico
     cd zenohcpp-build && \
         cmake --install .
 
-examples build_zenohc="ON" build_zenohcpp_zenohc="ON" build_zenohcpp_zenohpico="ON":
+examples build_zenohc="ON" build_zenohcpp_zenohc="ON" build_zenohcpp_zenohpico="ON": zenoh
     mkdir -p build
     cd build && \
         cmake -DCMAKE_PREFIX_PATH="`pwd`/../zenohc-install;`pwd`/../zenoh-pico-install;`pwd`/../zenohcpp-install" \
