@@ -7,3 +7,6 @@
 [submodule "zenoh-cpp"]
 	path = zenoh-cpp
 	url = https://github.com/eclipse-zenoh/zenoh-cpp.git
+[submodule "zenoh-pico"]
+	path = zenoh-pico
+	url = https://github.com/eclipse-zenoh/zenoh-pico.git
