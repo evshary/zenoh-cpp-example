@@ -1,8 +1,6 @@
-all: zenoh zenoh-c zenoh-pico zenoh-cpp examples
+all: lib examples
 
-all-c: zenoh-c zenoh-cpp examples
-
-all-pico: zenoh-pico zenoh-cpp-pico examples
+lib: zenoh zenoh-c zenoh-pico zenoh-cpp
 
 prepare:
     git submodule init
@@ -34,31 +32,24 @@ zenoh-pico:
     cd zenoh-pico-build && make
     cd zenoh-pico-build && make install
 
-zenoh-cpp:
+zenoh-cpp: zenoh-c zenoh-pico
     mkdir -p zenohcpp-install
     mkdir -p zenohcpp-build
     cd zenohcpp-build && \
-        cmake -DCMAKE_PREFIX_PATH=../zenohc-install/lib/cmake/zenohc/ \
+        cmake -DCMAKE_PREFIX_PATH="`pwd`/../zenoh-pico-install/lib/cmake/zenohpico/;`pwd`/../zenohc-install/lib/cmake/zenohc/" \
+              -DZENOHCXX_ZENOHC=ON -DZENOHCXX_ZENOHPICO=ON \
               -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
               ../zenoh-cpp
     cd zenohcpp-build && \
         cmake --install .
 
-zenoh-cpp-pico:
-    mkdir -p zenohcpp-install
-    mkdir -p zenohcpp-build
-    cd zenohcpp-build && \
-        cmake -DCMAKE_PREFIX_PATH=../zenoh-pico-install/lib/cmake/zenohpico/ \
-              -DZENOHCXX_ZENOHC=OFF -DZENOHCXX_ZENOHPICO=ON \
-              -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
-              ../zenoh-cpp
-    cd zenohcpp-build && \
-        cmake --install .
-
-examples:
+examples build_zenohc="ON" build_zenohcpp_zenohc="ON" build_zenohcpp_zenohpico="ON":
     mkdir -p build
     cd build && \
-        cmake .. && \
+        cmake -DCMAKE_PREFIX_PATH="`pwd`/../zenohc-install;`pwd`/../zenoh-pico-install;`pwd`/../zenohcpp-install" \
+              -DBUILD_ZENOHC={{build_zenohc}} \
+              -DBUILD_ZENOHCPP_ZENOHC={{build_zenohcpp_zenohc}} \
+              -DBUILD_ZENOHCPP_ZENOHPICO={{build_zenohcpp_zenohpico}} .. && \
         cmake --build .
 
 clean: clean-zenoh clean-zenoh-c clean-zenoh-pico clean-zenoh-cpp clean-examples

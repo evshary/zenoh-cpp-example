@@ -4,37 +4,40 @@ The repo shows how to build zenoh-cpp program with zenoh-c or zenoh-pico.
 
 ## Build
 
+You have two options for providing the necessary Zenoh dependencies:
+
+### Option 1: Install packages via APT (Ubuntu)
+
+If you are on Ubuntu, you can install the pre-built libraries directly:
+
+```bash
+sudo apt update
+sudo apt install libzenohcpp-dev libzenohc-dev libzenohpico-dev
+```
+
+Once installed, you can simply build the examples:
+
+```bash
+just examples
+```
+
+### Option 2: Build dependencies from source using justfile
+
 * Get submodule
 
 ```bash
 just prepare
 ```
 
-* Build zenoh REST plugin
+* Build all the dependencies
 
 ```bash
-just zenoh
+just lib
 ```
 
-* Build zenoh-cpp example with zenoh-c
+Once built, you can simply build the examples:
 
 ```bash
-just all-c
-```
-
-* Build zenoh-cpp example with zenoh-pico
-
-```shell
-just all-pico
-```
-
-* (Optional) You can build them separately.
-
-```bash
-just zenoh-c
-just zenoh-pico
-just zenoh-cpp
-# Or just zenoh-cpp-pico
 just examples
 ```
 
@@ -61,7 +64,10 @@ curl http://localhost:8000/**
 # Run router
 ./build/zenoh_router
 # Run put
-./build/zenoh_put_cpp
+## with zenoh-c backened
+./build/zenoh_put_cpp_zc
+## with zenoh-pico backend
+./build/zenoh_put_cpp_zpico
 ```
 
 ## Note
