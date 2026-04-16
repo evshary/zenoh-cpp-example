@@ -1,36 +1,40 @@
 # zenoh-cpp-example
 
-The repo shows how to build C++ program with zenoh-c or zenoh-cpp.
+The repo shows how to build zenoh-cpp program with zenoh-c or zenoh-pico.
 
 ## Build
 
 * Get submodule
 
-```shell
+```bash
 just prepare
 ```
 
 * Build zenoh REST plugin
 
-```shell
+```bash
 just zenoh
 ```
 
-* Build zenoh-c
+* Build zenoh-cpp example with zenoh-c
+
+```bash
+just all-c
+```
+
+* Build zenoh-cpp example with zenoh-pico
 
 ```shell
+just all-pico
+```
+
+* (Optional) You can build them separately.
+
+```bash
 just zenoh-c
-```
-
-* Build zenoh-cpp
-
-```shell
+just zenoh-pico
 just zenoh-cpp
-```
-
-* Build examples
-
-```shell
+# Or just zenoh-cpp-pico
 just examples
 ```
 

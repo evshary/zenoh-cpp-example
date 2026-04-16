@@ -1,4 +1,8 @@
-all: zenoh zenoh-c zenoh-cpp examples
+all: zenoh zenoh-c zenoh-pico zenoh-cpp examples
+
+all-c: zenoh-c zenoh-cpp examples
+
+all-pico: zenoh-pico zenoh-cpp-pico examples
 
 prepare:
     git submodule init
@@ -20,11 +24,32 @@ zenoh-c:
     cd zenohc-build && \
         cmake --build . --target install
 
+zenoh-pico:
+    mkdir -p zenoh-pico-install
+    mkdir -p zenoh-pico-build
+    cd zenoh-pico-build && \
+        cmake -DCMAKE_INSTALL_PREFIX=../zenoh-pico-install \
+              -DCMAKE_BUILD_TYPE=Release \
+              ../zenoh-pico
+    cd zenoh-pico-build && make
+    cd zenoh-pico-build && make install
+
 zenoh-cpp:
     mkdir -p zenohcpp-install
     mkdir -p zenohcpp-build
     cd zenohcpp-build && \
         cmake -DCMAKE_PREFIX_PATH=../zenohc-install/lib/cmake/zenohc/ \
+              -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
+              ../zenoh-cpp
+    cd zenohcpp-build && \
+        cmake --install .
+
+zenoh-cpp-pico:
+    mkdir -p zenohcpp-install
+    mkdir -p zenohcpp-build
+    cd zenohcpp-build && \
+        cmake -DCMAKE_PREFIX_PATH=../zenoh-pico-install/lib/cmake/zenohpico/ \
+              -DZENOHCXX_ZENOHC=OFF -DZENOHCXX_ZENOHPICO=ON \
               -DCMAKE_INSTALL_PREFIX=../zenohcpp-install \
               ../zenoh-cpp
     cd zenohcpp-build && \
@@ -36,13 +61,16 @@ examples:
         cmake .. && \
         cmake --build .
 
-clean: clean-zenoh clean-zenoh-c clean-zenoh-cpp clean-examples
+clean: clean-zenoh clean-zenoh-c clean-zenoh-pico clean-zenoh-cpp clean-examples
 
 clean-zenoh:
     cd zenoh && cargo clean
 
 clean-zenoh-c:
     rm -rf zenohc-build zenohc-install
+
+clean-zenoh-pico:
+    rm -rf zenoh-pico-build zenoh-pico-install
 
 clean-zenoh-cpp:
     rm -rf zenohcpp-build zenohcpp-install
